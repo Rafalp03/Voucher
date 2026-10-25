@@ -1,0 +1,5 @@
+# Zależności do testów i sprawdzania kodu (nie trafiają do obrazu produkcyjnego)
+-r requirements.txt
+pytest==8.3.4
+httpx==0.28.1
+ruff==0.8.4

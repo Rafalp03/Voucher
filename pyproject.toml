@@ -1,0 +1,25 @@
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["alembic/versions"]
+
+[tool.ruff.lint]
+# E/W: styl, F: błędy (np. nieużywane importy), I: kolejność importów,
+# B: częste pułapki, UP: nowsza składnia Pythona
+select = ["E", "W", "F", "I", "B", "UP"]
+
+[tool.ruff.lint.isort]
+# Katalog alembic/ w projekcie to migracje, a "import alembic" to biblioteka
+known-third-party = ["alembic"]
+
+[tool.ruff.lint.flake8-bugbear]
+# Depends(...) w argumentach to standardowy wzorzec FastAPI
+extend-immutable-calls = ["fastapi.Depends"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+filterwarnings = [
+    # Ostrzeżenie z wnętrza biblioteki Starlette, nie z naszego kodu
+    "ignore:The anyio.abc.BlockingPortal alias is deprecated:DeprecationWarning",
+]

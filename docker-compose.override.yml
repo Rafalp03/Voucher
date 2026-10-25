@@ -2,11 +2,16 @@
 # Docker Compose wczytuje ten plik automatycznie razem z docker-compose.yml.
 services:
   api:
-    # Kod z dysku podmontowany do kontenera: zmiany widać od razu, bez przebudowy obrazu
+    build:
+      args:
+        # Obraz z pytest i ruff, żeby testy i lint działały w kontenerze
+        INSTALL_DEV: "true"
+    # Cały projekt podmontowany do kontenera: zmiany w kodzie widać od razu, a nowe
+    # migracje utworzone w kontenerze (alembic revision) pojawiają się na dysku
     volumes:
-      - ./app:/app/app
-    # Automatyczny restart serwera po zapisaniu pliku
-    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+      - .:/app
+    # Automatyczny restart serwera po zapisaniu pliku w app/
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "app"]
     environment:
       # Wymusza wykrywanie zmian na Windows/macOS, gdzie zdarzenia plików nie zawsze docierają do kontenera
       WATCHFILES_FORCE_POLLING: "true"

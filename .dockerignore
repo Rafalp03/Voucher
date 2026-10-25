@@ -21,6 +21,9 @@ __pycache__/
 .vscode/
 .DS_Store
 
+# Testy (w trybie lokalnym są podmontowane przez docker-compose.override.yml)
+tests/
+
 # Pliki Dockera i dokumentacja (niepotrzebne w obrazie)
 Dockerfile
 docker-compose*.yml

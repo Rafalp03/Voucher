@@ -11,6 +11,7 @@ from app.db import engine, get_db
 
 logger = logging.getLogger("uvicorn.error")
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     yield
