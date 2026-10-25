@@ -1,0 +1,15 @@
+# Jednolite końce linii (LF) w repozytorium, niezależnie od systemu
+* text=auto eol=lf
+
+# Skrypty Windows muszą mieć CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Pliki binarne
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary

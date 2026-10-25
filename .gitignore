@@ -1,0 +1,22 @@
+# Sekrety
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.idea/
+.vscode/
+
+# System i logi
+.DS_Store
+Thumbs.db
+*.log

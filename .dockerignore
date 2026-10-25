@@ -1,0 +1,28 @@
+# Sekrety - nigdy nie trafiają do obrazu
+.env
+.env.*
+!.env.example
+
+# Git i pliki repozytorium
+.git
+.gitignore
+.gitattributes
+.github
+
+# Środowiska i cache Pythona
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# IDE i system
+.idea/
+.vscode/
+.DS_Store
+
+# Pliki Dockera i dokumentacja (niepotrzebne w obrazie)
+Dockerfile
+docker-compose*.yml
+README.md
+*.log

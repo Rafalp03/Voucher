@@ -1,0 +1,12 @@
+# Ustawienia do pracy lokalnej.
+# Docker Compose wczytuje ten plik automatycznie razem z docker-compose.yml.
+services:
+  api:
+    # Kod z dysku podmontowany do kontenera: zmiany widać od razu, bez przebudowy obrazu
+    volumes:
+      - ./app:/app/app
+    # Automatyczny restart serwera po zapisaniu pliku
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    environment:
+      # Wymusza wykrywanie zmian na Windows/macOS, gdzie zdarzenia plików nie zawsze docierają do kontenera
+      WATCHFILES_FORCE_POLLING: "true"
