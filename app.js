@@ -18,15 +18,17 @@ function getCart(){try{return JSON.parse(localStorage.getItem(KEY))||[]}catch(e)
 function setCart(c){localStorage.setItem(KEY,JSON.stringify(c));updateBadge()}
 function updateBadge(){document.getElementById('cart-count').textContent=getCart().reduce((s,i)=>s+i.qty,0)}
 const total=c=>c.reduce((s,i)=>s+i.value*i.qty,0);
-let filter='Wszystkie';
+let filter='Wszystkie',pf='Wszystkie ceny';
+const PR={'Wszystkie ceny':[0,1e9],'Do 100 zł':[0,100],'100–200 zł':[101,200],'200–500 zł':[201,500],'Powyżej 500 zł':[501,1e9]};
 
 function catalog(){
   const cats=['Wszystkie',...new Set(VOUCHERS.map(v=>v.cat))];
-  const list=VOUCHERS.filter(v=>filter==='Wszystkie'||v.cat===filter);
+  const [lo,hi]=PR[pf];const list=VOUCHERS.filter(v=>(filter==='Wszystkie'||v.cat===filter)&&v.values.some(x=>x>=lo&&x<=hi));
   $app.innerHTML=`<h1>Katalog voucherów</h1>
   <div class="filters">${cats.map(c=>`<button class="chip ${c===filter?'active':''}" data-cat="${c}">${c}</button>`).join('')}</div>
-  <div class="grid">${list.map(v=>`<a class="card" href="#/voucher/${v.id}">${thumb(v)}<div class="card-body"><span class="cat">${v.cat}</span><strong>${v.name}</strong><span class="price">od ${pln(Math.min(...v.values))}</span></div></a>`).join('')}</div>`;
-  $app.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{filter=b.dataset.cat;catalog()});
+  <div class="filters">${Object.keys(PR).map(c=>`<button class="chip pchip ${c===pf?'active':''}" data-p="${c}">💰 ${c}</button>`).join('')}</div>
+  <div class="grid">${list.length?'':'<p>Brak voucherów w tym przedziale.</p>'}${list.map(v=>`<a class="card" href="#/voucher/${v.id}">${thumb(v)}<div class="card-body"><span class="cat">${v.cat}</span><strong>${v.name}</strong><span class="price">od ${pln(Math.min(...v.values))}</span></div></a>`).join('')}</div>`;
+  $app.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{if(b.dataset.p)pf=b.dataset.p;else filter=b.dataset.cat;catalog()});
 }
 function detail(id){
   const v=find(id);if(!v)return notFound();
