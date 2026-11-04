@@ -1,4 +1,8 @@
 <!DOCTYPE html>
+<!--
+  VoucherShop – sklep z voucherami prezentowymi (projekt studencki).
+  Strona jest SPA: widoki renderuje js/main.js na podstawie hasha URL.
+-->
 <html lang="pl">
 <head>
 <meta charset="UTF-8">
@@ -9,7 +13,11 @@
 <link rel="icon" type="image/svg+xml" href="logo.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/views.css">
+<link rel="stylesheet" href="css/responsive.css">
 </head>
 <body>
 <header class="topbar">
@@ -20,6 +28,7 @@
 <div class="demo-banner">Wersja demonstracyjna – żadne płatności nie są realizowane.</div>
 <main id="app"></main>
 <footer>© 2026 VoucherShop · makieta sprintowa</footer>
-<script src="app.js"></script>
+<script type="module" src="js/main.js"></script>
+<noscript><p style="text-align:center">Aplikacja wymaga włączonej obsługi JavaScript.</p></noscript>
 </body>
 </html>
