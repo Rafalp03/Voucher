@@ -31,11 +31,12 @@ const PR={'Wszystkie ceny':[0,1e9],'Do 100 zł':[0,100],'100–200 zł':[101,200
 function catalog(){
   const cats=['Wszystkie',...new Set(VOUCHERS.map(v=>v.cat))];
   const [lo,hi]=PR[pf];const list=VOUCHERS.filter(v=>(filter==='Wszystkie'||v.cat===filter)&&v.values.some(x=>x>=lo&&x<=hi));
-  $app.innerHTML=`<h1>Katalog voucherów</h1>
+  $app.innerHTML=`<section class="hero"><span class="eyebrow">🎁 Prezenty, które się przeżywa</span><h1>Podaruj <span class="grad">wyjątkowe chwile</span>,<br>nie kolejną rzecz.</h1><p>SPA, kolacje, skoki ze spadochronem i warsztaty – vouchery wysyłane e-mailem w kilka minut, ważne 12 miesięcy.</p><a class="btn" href="#katalog" id="cta">Wybierz voucher →</a></section><h2 id="katalog" class="section-title">Katalog voucherów</h2>
   <div class="filters">${cats.map(c=>`<button class="chip ${c===filter?'active':''}" data-cat="${c}">${c}</button>`).join('')}</div>
   <div class="filters">${Object.keys(PR).map(c=>`<button class="chip pchip ${c===pf?'active':''}" data-p="${c}">💰 ${c}</button>`).join('')}</div>
   <div class="grid">${list.length?'':'<p>Brak voucherów w tym przedziale.</p>'}${list.map(v=>`<a class="card" href="#/voucher/${v.id}">${thumb(v)}<div class="card-body"><span class="cat">${v.cat}</span><strong>${v.name}</strong><span class="price">od ${pln(Math.min(...v.values))}</span></div></a>`).join('')}</div>`;
-  $app.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{if(b.dataset.p)pf=b.dataset.p;else filter=b.dataset.cat;catalog()});
+  $app.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{if(b.dataset.p)pf=b.dataset.p;else filter=b.dataset.cat;catalog();document.getElementById('katalog').scrollIntoView()});
+  document.getElementById('cta').onclick=e=>{e.preventDefault();document.getElementById('katalog').scrollIntoView({behavior:'smooth'})};
 }
 function detail(id){
   const v=find(id);if(!v)return notFound();

@@ -19,7 +19,7 @@ Waluta: PLN.
 Settings → Pages → Deploy from branch → `main` / `(root)`.
 
 ## Pliki
-`index.html`, `styles.css`, `app.js`, `README.md`, `img/`
+`index.html`, `styles.css`, `app.js`, `README.md`, `logo.svg` (logo i favicon), `img/`
 
 ## Konta użytkowników (DEMO)
 Logowanie (`#/logowanie`), rejestracja (`#/rejestracja`) i profil (`#/konto`) działają wyłącznie w `localStorage` przeglądarki – bez backendu. Hasła są solone i hashowane SHA-256 (SubtleCrypto), ale to nadal tylko makieta – nie używaj prawdziwych haseł. Zamówienia zalogowanego użytkownika trafiają do jego historii.
@@ -37,5 +37,6 @@ Wszystkie zdjęcia to prawdziwe fotografie (nie AI) z Wikimedia Commons, przeska
 | Gokarty (`img/gokarty.jpg`) | Genevieve (Flickr) | https://commons.wikimedia.org/wiki/File:Go_kart_racing_(6238710513).jpg | CC BY 2.0 |
 | Kawa (`img/kawa.jpg`) | Kim Sanso | https://commons.wikimedia.org/wiki/File:Latte_art_3.jpg | CC0 |
 | Joga (`img/joga.jpg`) | David Scott Yglesias | https://commons.wikimedia.org/wiki/File:Energy_Yoga_Teacher_Training_with_David_Scott_Yglesias.jpg | CC BY 4.0 |
+| Tło strony (`img/bg.jpg`, `img/bg.webp`) | The Roaming Picture Taker (Flickr) | https://commons.wikimedia.org/wiki/File:Christmas_Lights,_Market_Place,_Derby_(54223053964).jpg | CC BY 2.0 |
 
 Zdjęcia zostały przeskalowane i skompresowane (zmiana formatu), bez innych modyfikacji.
