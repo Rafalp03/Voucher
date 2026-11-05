@@ -52,23 +52,6 @@ Repozytorium składa się z dwóch części:
 | Kody voucherów i ich realizacja                           | do zrobienia, czeka na decyzje PO |
 | Prawdziwe płatności                                       | do zrobienia, czeka na decyzje PO |
 
-### Otwarte pytania
-
-Decyzje, od których zależy model danych (Product Owner):
-
-1. Voucher kwotowy (np. 100 zł) czy na konkretną usługę lub produkt? Czy można go wykorzystać częściowo?
-2. Jakie statusy ma voucher i kto je zmienia?
-3. Jakie są role użytkowników (kupujący, administrator, sprzedawca lub partner)? Czy potrzebne jest logowanie?
-4. Płatności: na start ręcznie oznaczane czy od razu przez bramkę (np. Przelewy24, Stripe)?
-5. Realizacja: wpisanie kodu czy skan QR? Czy voucher wysyłamy mailem lub jako PDF?
-6. Ważność: stały okres? Czy można ją przedłużyć?
-
-Tymczasowe założenia w obecnym kodzie (do potwierdzenia przez PO):
-
-- Voucher ma kilka progów cenowych, każdy z opisem zawartości pakietu (jak w katalogu frontendu).
-- Jedna rola: klient. Zakup możliwy jako gość albo z konta. Brak panelu administratora.
-- Płatność jest symulowana: zamówienie od razu dostaje status `paid`.
-- Kody voucherów nie są jeszcze generowane, a ważność (12 miesięcy) jest tylko informacją na stronie.
 
 ## Zespół
 
