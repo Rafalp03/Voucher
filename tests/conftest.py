@@ -4,6 +4,8 @@ import os
 # Musi być ustawione przed importem aplikacji, bo ustawienia czytane są przy imporcie.
 TEST_DB = os.environ.get("TEST_POSTGRES_DB", "voucher_test")
 os.environ["POSTGRES_DB"] = TEST_DB
+# Klucz JWT tylko dla testów (CI nie ma pliku .env)
+os.environ.setdefault("JWT_SECRET", "klucz-testowy-tylko-do-pytest-0123456789")
 
 from collections.abc import Iterator  # noqa: E402
 

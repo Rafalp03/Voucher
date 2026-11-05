@@ -20,9 +20,11 @@ Planowany zakres (szczegóły ustala Product Owner, patrz [Otwarte pytania](#otw
 | Środowisko Docker (API + PostgreSQL)                      | gotowe        |
 | Połączenie API z bazą, `/health`                          | gotowe        |
 | Migracje bazy (Alembic), testy (pytest), lint (ruff), CI  | gotowe        |
-| Model danych: tabele voucherów, zamówień itd.             | do zrobienia, czeka na decyzje PO |
-| Endpointy i logika biznesowa                              | do zrobienia  |
-| Frontend                                                  | do zrobienia  |
+| Model danych: użytkownicy, katalog voucherów, koszyk, zamówienia | gotowe |
+| Endpointy sklepu (`/api/v1`) zgodne z frontendem          | gotowe        |
+| Integracja z frontendem ([voucher-shop](#współpraca-z-frontendem-voucher-shop)) | gotowe |
+| Kody voucherów i ich realizacja                           | do zrobienia, czeka na decyzje PO |
+| Prawdziwe płatności                                       | do zrobienia, czeka na decyzje PO |
 
 ### Otwarte pytania
 
@@ -34,6 +36,13 @@ Decyzje, od których zależy model danych (Product Owner):
 4. Płatności: na start ręcznie oznaczane czy od razu przez bramkę (np. Przelewy24, Stripe)?
 5. Realizacja: wpisanie kodu czy skan QR? Czy voucher wysyłamy mailem lub jako PDF?
 6. Ważność: stały okres? Czy można ją przedłużyć?
+
+Tymczasowe założenia w obecnym kodzie (do potwierdzenia przez PO):
+
+- Voucher ma kilka progów cenowych, każdy z opisem zawartości pakietu (jak w katalogu frontendu).
+- Jedna rola: klient. Zakup możliwy jako gość albo z konta. Brak panelu administratora.
+- Płatność jest symulowana: zamówienie od razu dostaje status `paid`.
+- Kody voucherów nie są jeszcze generowane, a ważność (12 miesięcy) jest tylko informacją na stronie.
 
 ## Zespół
 
@@ -53,16 +62,22 @@ Decyzje, od których zależy model danych (Product Owner):
 - SQLAlchemy 2 (ORM) + psycopg 3 (sterownik bazy)
 - Alembic (migracje bazy)
 - pydantic-settings (konfiguracja ze zmiennych środowiskowych)
+- PyJWT (tokeny logowania), argon2-cffi (hashowanie haseł)
 - pytest (testy), ruff (lint i formatowanie)
 - Docker, Docker Compose, GitHub Actions (CI)
 
 ## Jak działa projekt
 
-Projekt składa się z dwóch kontenerów uruchamianych przez Docker Compose:
+Projekt składa się z dwóch kontenerów uruchamianych przez Docker Compose. Frontend
+([voucher-shop](https://github.com/DragneelTracer/voucher-shop)) to osobne repozytorium ze statycznymi plikami,
+które przeglądarka pobiera z dowolnego serwera HTTP (lokalnie: port 8080).
 
 ```
- przeglądarka / frontend / testy
-            │  http://localhost:8000
+ ┌──────────────────────┐
+ │ przeglądarka         │  frontend voucher-shop z http://localhost:8080
+ │ (sklep, Swagger)     │  (lub GitHub Pages, wtedy w trybie mock bez API)
+ └──────────┬───────────┘
+            │ REST /api/v1 (JSON), http://localhost:8000
             ▼
  ┌──────────────────────┐        ┌──────────────────────┐
  │ voucher-api          │        │ voucher-db           │
@@ -123,10 +138,105 @@ docker compose down -v     # dodatkowo usuwa dane bazy (czysta baza przy następ
 | `POSTGRES_PASSWORD` | hasło do bazy                                                 | `zmien_mnie`               |
 | `POSTGRES_DB`       | nazwa bazy                                                    | `voucher`                  |
 | `POSTGRES_PORT`     | port bazy na Twoim komputerze (zmień, jeśli 5433 jest zajęty) | `5433`                     |
+| `JWT_SECRET`        | klucz do podpisywania tokenów logowania, **min. 32 znaki**    | wartość przykładowa, zmień |
+| `JWT_EXPIRE_MINUTES`| ważność tokenu logowania (opcjonalne)                         | `1440` (24 h)              |
+| `CORS_ORIGINS`      | adresy frontendu, z których wolno wołać API, po przecinku (opcjonalne) | `localhost` na portach 8080, 5500, 3000 |
+
+Własny `JWT_SECRET` wygenerujesz poleceniem:
+
+```bash
+docker compose exec api python -c "import secrets; print(secrets.token_hex(32))"
+```
 
 Adres bazy dla API (`DB_HOST=db`, `DB_PORT=5432`) jest ustawiony w `docker-compose.yml` i nie trzeba go zmieniać.
 
 > **Uwaga:** Postgres ustawia hasło tylko przy pierwszym uruchomieniu, czyli przy pustym wolumenie. Po zmianie hasła w `.env` trzeba wyczyścić bazę (`docker compose down -v`), inaczej API zgłosi `password authentication failed`.
+
+## Model danych
+
+Tabele tworzą migracje Alembica (`alembic/versions/`), a modele są w `app/models/`.
+
+| Tabela           | Co przechowuje                                                                 |
+|------------------|--------------------------------------------------------------------------------|
+| `vouchers`       | katalog: nazwa, kategoria, opis, zdjęcie, kolejność (`sort_order`), czy aktywny (`is_active`) |
+| `voucher_tiers`  | progi cenowe vouchera (`value`) z opisem pakietu; para voucher + wartość jest unikalna |
+| `users`          | konta klientów; hasło tylko jako skrót Argon2 (`password_hash`)                |
+| `revoked_tokens` | tokeny unieważnione przy wylogowaniu (do daty ich wygaśnięcia)                 |
+| `cart_items`     | pozycje koszyków; `cart_id` to wartość nagłówka `X-Cart-Id`, `tier_id` wskazuje próg cenowy |
+| `orders`         | zamówienia: dane klienta, metoda płatności, status, suma; `user_id` pusty przy zakupie jako gość |
+| `order_items`    | pozycje zamówienia z nazwą i ceną skopiowaną w chwili zakupu                   |
+
+```
+vouchers 1───N voucher_tiers 1───N cart_items
+    │
+    └──────1───N order_items N───1 orders N───1 users (opcjonalnie)
+```
+
+Pozycje zamówienia nie wskazują progu cenowego, tylko kopiują nazwę i cenę. Dzięki temu zmiana
+katalogu nie zmienia historii zamówień.
+
+Dane w bazie można bezpośrednio podejrzeć, patrz [Podgląd danych w bazie](#podgląd-danych-w-bazie).
+
+## Endpointy
+
+Wszystkie endpointy sklepu mają prefiks `/api/v1`. Pełna, interaktywna lista jest w Swaggerze
+(http://localhost:8000/docs), a kontrakt z frontendem opisuje `docs/API.md` w repozytorium
+[voucher-shop](https://github.com/DragneelTracer/voucher-shop).
+
+| Metoda i ścieżka                    | Opis                                                        | Logowanie |
+|-------------------------------------|-------------------------------------------------------------|-----------|
+| `GET /vouchers`                     | katalog (filtry `category`, `minPrice`, `maxPrice`)         | nie       |
+| `GET /vouchers/{id}`                | jeden voucher z progami cenowymi                            | nie       |
+| `POST /auth/register`               | rejestracja, zwraca token i użytkownika                     | nie       |
+| `POST /auth/login`                  | logowanie, zwraca token i użytkownika                       | nie       |
+| `POST /auth/logout`                 | unieważnia token                                            | tak       |
+| `GET /users/me`                     | profil zalogowanego użytkownika                             | tak       |
+| `GET /cart`                         | zawartość koszyka                                           | nie       |
+| `POST /cart/items`                  | dodanie pozycji (lub zwiększenie ilości)                    | nie       |
+| `PUT /cart/items/{index}`           | zmiana ilości (`qty < 1` usuwa pozycję)                     | nie       |
+| `DELETE /cart/items/{index}`        | usunięcie pozycji                                           | nie       |
+| `DELETE /cart`                      | wyczyszczenie koszyka                                       | nie       |
+| `POST /orders`                      | złożenie zamówienia (ceny liczy serwer)                     | nie       |
+| `GET /orders`                       | historia zamówień użytkownika                               | tak       |
+| `GET /orders/{id}`                  | szczegóły zamówienia                                        | gość: tylko swoje zamówienie gościa |
+
+Zasady:
+
+- **Logowanie:** nagłówek `Authorization: Bearer <token>`. Token to JWT ważny 24 h. Wylogowanie wpisuje go do tabeli `revoked_tokens`. Hasła są hashowane algorytmem Argon2.
+- **Koszyk** rozpoznajemy po nagłówku `X-Cart-Id` (losowy UUID, który frontend tworzy i trzyma w `localStorage`), także u gościa.
+- **Zamówienie:** klient wysyła tylko `voucherId`, `value` i `qty`. Serwer sprawdza, czy taki próg cenowy istnieje, i sam liczy sumę. Płatność jest symulowana, więc zamówienie od razu ma status `paid`. Numer zamówienia (`VS-` + 10 losowych znaków) jest trudny do zgadnięcia, bo gość ogląda zamówienie właśnie po numerze.
+- **Błędy** mają jedną postać, a `message` jest po polsku i frontend pokazuje go użytkownikowi:
+  ```json
+  {"message": "Nieprawidłowy e-mail lub hasło.", "code": "INVALID_CREDENTIALS"}
+  ```
+- **Dane startowe:** migracja `dane_startowe_katalogu` wstawia 8 voucherów (21 progów cenowych) z katalogu frontendu.
+
+## Współpraca z frontendem (voucher-shop)
+
+Frontend to statyczna aplikacja (HTML, CSS, JS) w osobnym repozytorium. Domyślnie łączy się z API pod `http://localhost:8000/api/v1`.
+
+1. Uruchom backend: `docker compose up -d` (w tym repozytorium).
+2. Uruchom frontend w katalogu `voucher-shop`:
+   ```bash
+   python -m http.server 8080      # Windows: py -m http.server 8080
+   ```
+   Na Windowsie polecenie `python` często otwiera Microsoft Store. Wtedy użyj `py`.
+3. Otwórz http://localhost:8080.
+
+### Ręczne testowanie sklepu
+
+1. **Katalog:** wybierz voucher, wartość i ilość, kliknij „Dodaj do koszyka”.
+2. **Koszyk:** zmień ilość lub usuń pozycję. Licznik w nagłówku powinien się zmieniać.
+3. **Płatność:** podaj dowolne dane testowe, np. BLIK `123456` albo kartę `4242 4242 4242 4242`, `12/30`, CVC `123`.
+   Dane karty i kod BLIK nie są wysyłane do API. Po zapłacie pojawia się ekran z numerem zamówienia (`VS-...`).
+4. **Konto:** zarejestruj się (hasło min. 8 znaków, litera i cyfra), złóż zamówienie i sprawdź je w „Moje konto”.
+5. **Baza:** sprawdź, czy zamówienie zapisało się w tabelach `orders` i `order_items` (patrz niżej).
+
+W przeglądarce (F12, zakładka Network) widać żądania do `http://localhost:8000/api/v1/...` i odpowiedzi API.
+
+Frontend serwowany z innego portu niż 8080, 5500 lub 3000 trzeba dopisać do `CORS_ORIGINS` w `.env`. Inaczej przeglądarka zablokuje żądania do API.
+
+Na GitHub Pages frontend sam przełącza się na dane testowe (mock), bo nie ma tam backendu. Tryb można też wymusić parametrem adresu: `?mock=1` albo `?mock=0`.
 
 ## Praca z kodem
 
@@ -193,6 +303,9 @@ docker compose exec api pytest tests/test_health.py   # jeden plik
 
 - Testy działają na **osobnej bazie `voucher_test`**, która przy każdym uruchomieniu jest tworzona od nowa i migrowana. Twoje dane w bazie `voucher` nie są ruszane.
 - Każdy test działa w transakcji wycofywanej na końcu, więc testy nie wpływają na siebie nawzajem.
+- Testy endpointów sklepu są w plikach `test_vouchers.py`, `test_auth.py`, `test_cart.py`, `test_orders.py`
+  i `test_cors.py`. Wspólne funkcje pomocnicze (rejestracja, przykładowe zamówienie) są w `tests/helpers.py`.
+- Katalog voucherów jest w bazie testowej od początku, bo wstawia go migracja.
 - Gotowe fixture'y w `tests/conftest.py`:
   - `client`: klient HTTP do API,
   - `db_session`: sesja bazy do przygotowania danych testowych.
@@ -214,6 +327,40 @@ docker compose exec api ruff format .        # formatowanie kodu
 ```
 
 Konfiguracja ruffa i pytesta jest w `pyproject.toml`.
+
+### Podgląd danych w bazie
+
+**Konsola SQL w kontenerze** (najszybciej):
+
+```bash
+docker compose exec db psql -U voucher -d voucher
+```
+
+Przydatne zapytania (wyjście z konsoli: `\q`, lista tabel: `\dt`):
+
+```sql
+-- ostatnie zamówienia, z kontem (puste = zakup jako gość)
+SELECT o.id, o.customer_name, o.email, o.payment_method, o.status, o.total,
+       u.email AS konto, o.created_at
+FROM orders o LEFT JOIN users u ON u.id = o.user_id
+ORDER BY o.created_at DESC LIMIT 10;
+
+-- pozycje wybranego zamówienia
+SELECT voucher_name, unit_value, qty FROM order_items WHERE order_id = 'VS-XXXXXXXXXX';
+
+-- konta (bez skrótów haseł)
+SELECT id, name, email, created_at FROM users ORDER BY id DESC;
+
+-- aktualne koszyki
+SELECT c.cart_id, t.voucher_id, t.value, c.qty
+FROM cart_items c JOIN voucher_tiers t ON t.id = c.tier_id ORDER BY c.cart_id, c.id;
+```
+
+**DBeaver:** nowe połączenie PostgreSQL, host `localhost`, port `5433` (lub `POSTGRES_PORT` z `.env`),
+baza `voucher`, użytkownik i hasło z `.env`. Tabele są w schemacie `public`.
+Danych w DBeaverze nie zmieniamy ręcznie, tylko je przeglądamy.
+
+**Przez API:** zamówienie złożone jako gość widać pod `http://localhost:8000/api/v1/orders/<numer>`.
 
 ### Inne przydatne polecenia
 
@@ -239,6 +386,8 @@ PR scalamy dopiero, gdy wszystkie kroki są zielone. Przed wysłaniem zmian wart
 
 | Objaw                                              | Rozwiązanie                                                                 |
 |----------------------------------------------------|-----------------------------------------------------------------------------|
+| API nie startuje, w logach `jwt_secret Field required` lub `at least 32 characters` | dopisz `JWT_SECRET` (min. 32 znaki) do `.env`, wzór w `.env.example` |
+| przeglądarka zgłasza błąd CORS, frontend pokazuje „Brak połączenia z serwerem” | dopisz adres frontendu do `CORS_ORIGINS` w `.env` i zrestartuj API; sprawdź też, czy API działa (`/health`) |
 | `/health` zwraca 503, w logach `password authentication failed` | hasło w `.env` różni się od tego w bazie: `docker compose down -v`, potem `docker compose up` |
 | API nie startuje, w logach błąd z `alembic`        | błąd w migracji: sprawdź ostatni plik w `alembic/versions/`                  |
 | `port is already allocated` dla 5433               | zmień `POSTGRES_PORT` w `.env`                                               |
@@ -251,15 +400,21 @@ PR scalamy dopiero, gdy wszystkie kroki są zielone. Przed wysłaniem zmian wart
 
 ```
 app/                        kod aplikacji (FastAPI)
-  main.py                   aplikacja i endpointy
+  main.py                   aplikacja: CORS, obsługa błędów, podpięcie routerów, /health
   config.py                 ustawienia ze zmiennych środowiskowych
   db.py                     połączenie z bazą (SQLAlchemy), sesja get_db, klasa Base modeli
   models/                   modele ORM (tabele bazy)
+  routers/                  endpointy /api/v1: vouchers, auth (i users/me), cart, orders
+  schemas.py                schematy żądań i odpowiedzi (JSON w camelCase)
+  deps.py                   zależności: zalogowany użytkownik, identyfikator koszyka
+  security.py               hashowanie haseł (Argon2) i tokeny JWT
+  errors.py                 jednolity format błędów {message, code}
 alembic/                    migracje bazy
   versions/                 pliki migracji (commitujemy je do repo)
   env.py                    konfiguracja Alembica (adres bazy z app/config.py)
 tests/                      testy (pytest)
   conftest.py               baza testowa i fixture'y client, db_session
+  helpers.py                funkcje pomocnicze testów (rejestracja, przykładowe zamówienie)
 scripts/entrypoint.sh       start kontenera: migracje, potem serwer
 .github/workflows/ci.yml    CI: lint, testy, budowanie obrazu
 Dockerfile                  obraz API
