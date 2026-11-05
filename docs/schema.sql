@@ -2,7 +2,6 @@
 --  VoucherShop – schemat bazy danych backendu (PostgreSQL 16)
 --
 --  Plik poglądowy. Bazę tworzą i zmieniają wyłącznie migracje Alembica
---  w repozytorium backendu: https://github.com/Rafalp03/Voucher
 --  (katalog alembic/versions/, modele w app/models/).
 --  Przy zmianach w bazie aktualizuj ten plik razem z migracją.
 -- =====================================================================
@@ -88,7 +87,7 @@ CREATE INDEX ix_cart_items_cart_id         ON cart_items(cart_id);
 CREATE INDEX ix_orders_user_id_created_at  ON orders(user_id, created_at);
 CREATE INDEX ix_order_items_order_id       ON order_items(order_id);
 
--- Dane startowe: migracja backendu wstawia cały katalog z js/mock/data.js
+-- Dane startowe: migracja backendu wstawia cały katalog z frontend/js/mock/data.js
 -- (8 voucherów, 21 progów cenowych). Przykład dla jednego vouchera:
 INSERT INTO vouchers (id, name, category, description, image_url, emoji, gradient, sort_order) VALUES
  ('spa', 'Dzień w SPA', 'Relaks', 'Masaż, sauna i chwila wytchnienia w wybranym salonie SPA.', 'img/spa.jpg', '💆', '#ffafbd,#ffc3a0', 10);

@@ -1,9 +1,9 @@
 # Specyfikacja REST API – VoucherShop
 
-Dokument opisuje endpointy backendu. Są zaimplementowane w repozytorium
-[Voucher](https://github.com/Rafalp03/Voucher), a interaktywna dokumentacja (Swagger)
-jest pod `http://localhost:8000/docs`. Frontend łączy się z nimi, gdy `USE_MOCK = false`
-(zob. `js/config.js`).
+Dokument opisuje endpointy backendu i jest kontraktem między frontendem (`frontend/`)
+a backendem (`app/`). Implementacja jest w `app/routers/`, a interaktywna dokumentacja (Swagger)
+jest pod `http://localhost:8000/docs`. Frontend łączy się z API, gdy `USE_MOCK = false`
+(zob. `frontend/js/config.js`). Zmieniając API, aktualizuj ten plik w tym samym Pull Requeście.
 
 ## Konwencje
 
@@ -168,7 +168,7 @@ Frontend zapamiętuje identyfikator ostatniego zamówienia (`voucherLastOrderId`
 
 ## Mapowanie na kod frontendu
 
-| Serwis (`js/api/`) | Metoda | Endpoint |
+| Serwis (`frontend/js/api/`) | Metoda | Endpoint |
 |---|---|---|
 | `vouchersService` | `getAll()` | `GET /vouchers` |
 | | `getById(id)` | `GET /vouchers/:id` |

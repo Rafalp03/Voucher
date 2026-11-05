@@ -1,5 +1,8 @@
 # VoucherShop – internetowy sklep z voucherami prezentowymi
 
+> Ten katalog to frontend projektu **Voucher**. Opis całego projektu, uruchomienie (frontend + API + baza)
+> i backend: [README w katalogu głównym](../README.md).
+
 > Projekt zaliczeniowy · aplikacja typu SPA (Single Page Application) w czystym HTML, CSS i JavaScript (ES Modules).
 
 ## 1. Cel projektu
@@ -28,8 +31,10 @@ dzięki czemu w kolejnym etapie można ją podłączyć do backendu z relacyjną
 Aplikacja ma budowę warstwową. Widoki nie odwołują się bezpośrednio do `localStorage` ani do `fetch` –
 korzystają wyłącznie z **serwisów**, które zwracają `Promise`. Serwis, w zależności od flagi
 `USE_MOCK` w `js/config.js`, deleguje wywołanie do implementacji testowej (mock) albo do REST API
-(wzorzec *Strategy / Adapter*). Backend REST jest w repozytorium
-[Voucher](https://github.com/Rafalp03/Voucher) (FastAPI + PostgreSQL).
+(wzorzec *Strategy / Adapter*). Backend REST (FastAPI + PostgreSQL) jest w tym samym repozytorium,
+w katalogu `app/` (opis w [README głównym](../README.md)).
+
+Pliki frontendu wysyła do przeglądarki kontener `web` (nginx); cała logika działa w przeglądarce.
 
 ```mermaid
 flowchart TD
@@ -50,7 +55,7 @@ Dodatkowe mechanizmy:
 ## 4. Struktura katalogów
 
 ```
-voucher-shop/
+frontend/
 ├── index.html              # szkielet strony, nagłówek z logo, ładowanie modułów
 ├── logo.svg                # logo i favicon
 ├── css/
@@ -81,43 +86,44 @@ voucher-shop/
 │       ├── header.js       # licznik koszyka, link konta
 │       ├── catalog.js  detail.js  cart.js  payment.js  success.js
 │       ├── login.js  register.js  account.js  notFound.js
-├── img/                    # zdjęcia voucherów i tło (JPG/WebP)
-└── docs/
-    ├── API.md              # kontrakt REST API (zaimplementowany w backendzie Voucher)
-    └── schema.sql          # schemat bazy backendu (poglądowo; źródłem są migracje backendu)
+└── img/                    # zdjęcia voucherów i tło (JPG/WebP)
 ```
+
+Dokumentacja wspólna z backendem jest w katalogu głównym repozytorium:
+[`docs/API.md`](../docs/API.md) (kontrakt REST API) i [`docs/schema.sql`](../docs/schema.sql) (schemat bazy).
 
 ## 5. Uruchomienie lokalne
 
-Domyślnie aplikacja uruchomiona lokalnie korzysta z backendu pod `http://localhost:8000/api/v1`.
-Najpierw uruchom backend (repozytorium [Voucher](https://github.com/Rafalp03/Voucher)):
+Najprościej uruchomić cały projekt z katalogu głównego repozytorium:
 
 ```bash
-cd Voucher
 cp .env.example .env        # tylko za pierwszym razem; w PowerShell: copy .env.example .env
 docker compose up --build
 ```
 
-Moduły ES wymagają serwowania plików przez HTTP (nie działają z `file://`). Przykładowo:
+Sklep jest wtedy pod <http://localhost:8080> (nginx serwuje ten katalog), a API pod `http://localhost:8000/api/v1`.
+Katalog jest podmontowany do kontenera, więc po zmianie pliku wystarczy odświeżyć stronę (Ctrl+F5).
+Projekt nie wymaga instalacji zależności ani procesu budowania.
+
+**Bez Dockera** (sam frontend). Moduły ES wymagają serwowania plików przez HTTP (nie działają z `file://`),
+więc w katalogu `frontend/` uruchom dowolny serwer, np.:
 
 ```bash
 # Python 3 (Linux / macOS)
-python3 -m http.server 8080
+python3 -m http.server 5500
 # Python 3 (Windows) – polecenie python często otwiera Microsoft Store, wtedy użyj py
-py -m http.server 8080
+py -m http.server 5500
 # lub Node.js (domyślnie port 3000)
 npx serve .
 ```
 
-Następnie otwórz <http://localhost:8080>. Projekt nie wymaga instalacji zależności ani procesu budowania.
-Serwer zatrzymasz klawiszami `Ctrl+C`.
+Port 8080 jest zajęty przez kontener `web`, gdy działa Docker, dlatego w przykładzie jest 5500.
+Backend przyjmuje żądania (CORS) z `localhost` i `127.0.0.1` na portach **8080**, **5500** (np. Live Server w VS Code)
+i **3000** (`npx serve`). Inny port trzeba dopisać do `CORS_ORIGINS` w `.env`.
 
-Backend przyjmuje żądania (CORS) z `localhost` i `127.0.0.1` na portach **8080**, **5500** (Live Server w VS Code)
-i **3000** (`npx serve`). Inny port trzeba dopisać do `CORS_ORIGINS` w `.env` backendu.
+Bez backendu dodaj do adresu `?mock=1` (np. <http://localhost:5500/?mock=1>) – aplikacja użyje danych testowych.
 
-Bez backendu otwórz <http://localhost:8080/?mock=1> – aplikacja użyje danych testowych.
-
-**GitHub Pages:** Settings → Pages → *Deploy from branch* → `main` / `(root)`.
+**GitHub Pages:** frontend publikuje workflow `.github/workflows/pages.yml` (opis w [README głównym](../README.md#publikacja-frontendu-na-github-pages)).
 Na `*.github.io` aplikacja automatycznie działa w trybie mock (tam nie ma backendu).
 
 ### Jak przetestować ręcznie
@@ -129,7 +135,7 @@ Na `*.github.io` aplikacja automatycznie działa w trybie mock (tam nie ma backe
 4. **Konto** → zarejestruj się (hasło min. 8 znaków, litera i cyfra), złóż zamówienie i sprawdź je w „Moje konto”.
 
 W narzędziach przeglądarki (F12 → Network) widać żądania do `http://localhost:8000/api/v1/...`.
-Czy zamówienie zapisało się w bazie, sprawdzisz według sekcji „Podgląd danych w bazie” w README backendu.
+Czy zamówienie zapisało się w bazie, sprawdzisz według sekcji [„Podgląd danych w bazie”](../README.md#podgląd-danych-w-bazie) w README głównym.
 Komunikat „Brak połączenia z serwerem” oznacza, że backend nie działa albo blokuje go CORS
 (adres frontendu musi być w `CORS_ORIGINS`).
 
@@ -149,7 +155,8 @@ Wdrożenie z backendem na serwerze:
 2. Dodaj domenę frontendu do `CORS_ORIGINS` w konfiguracji backendu.
 
 Żadne widoki nie wymagają modyfikacji – zmienia się wyłącznie implementacja wybierana przez serwisy.
-Kontrakt API: [`docs/API.md`](docs/API.md).
+Kontrakt API: [`docs/API.md`](../docs/API.md). Zmieniając API, aktualizuj w tym samym Pull Requeście
+backend, ten dokument i serwisy w `js/api/`.
 
 ## 7. Technologie
 
@@ -160,14 +167,16 @@ Kontrakt API: [`docs/API.md`](docs/API.md).
 | Logika | JavaScript ES2022, moduły ES (`type="module"`), `async/await`, Fetch API |
 | Bezpieczeństwo (demo) | Web Crypto API (SHA-256 + sól) |
 | Czcionki | Google Fonts – Inter, Poppins |
-| Hosting | GitHub Pages |
-| Backend | REST API (FastAPI) + PostgreSQL – repozytorium [Voucher](https://github.com/Rafalp03/Voucher) |
+| Hosting | nginx w Dockerze (lokalnie), GitHub Pages (demo w trybie mock) |
+| Backend | REST API (FastAPI) + PostgreSQL – katalog `app/` tego repozytorium |
 
 ## 8. Zespół
 
 | Rola | Osoby |
 |---|---|
 | Frontend | Adrian, Szymon |
+
+Pełny skład zespołu projektu: [README główne](../README.md#zespół).
 
 ## 9. Ograniczenia wersji demonstracyjnej
 

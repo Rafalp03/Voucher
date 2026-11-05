@@ -1,10 +1,26 @@
 # Voucher
 
-System sprzedaży i obsługi voucherów, udostępniany jako API (REST).
+System sprzedaży i obsługi voucherów: sklep internetowy **VoucherShop** (frontend) oraz REST API
+z bazą PostgreSQL (backend), w jednym repozytorium.
+
+## Szybki start
+
+Wymagany jest tylko [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+
+```bash
+git clone https://github.com/Rafalp03/Voucher.git
+cd Voucher
+cp .env.example .env        # w Windows (PowerShell): copy .env.example .env
+docker compose up --build
+```
+
+Sklep: **http://localhost:8080** · API (Swagger): **http://localhost:8000/docs**
+
+Szczegóły w sekcji [Uruchomienie lokalne](#uruchomienie-lokalne).
 
 ## O projekcie
 
-**Voucher** to backend do sprzedaży i obsługi bonów (voucherów). Klient kupuje voucher, dostaje unikalny kod, a potem realizuje go u sprzedawcy. System pilnuje, żeby każdy voucher był ważny, wykorzystany tylko zgodnie z zasadami i żeby było wiadomo, co się z nim działo.
+**Voucher** to system do sprzedaży i obsługi bonów (voucherów). Klient kupuje voucher, dostaje unikalny kod, a potem realizuje go u sprzedawcy. System pilnuje, żeby każdy voucher był ważny, wykorzystany tylko zgodnie z zasadami i żeby było wiadomo, co się z nim działo.
 
 Planowany zakres (szczegóły ustala Product Owner, patrz [Otwarte pytania](#otwarte-pytania)):
 
@@ -12,6 +28,15 @@ Planowany zakres (szczegóły ustala Product Owner, patrz [Otwarte pytania](#otw
 - **Sprawdzanie i realizacja:** weryfikacja kodu, oznaczanie vouchera jako wykorzystanego.
 - **Cykl życia vouchera:** statusy, np. utworzony, aktywny, wykorzystany, wygasły, anulowany.
 - **API dla frontendu i integracji:** dokumentacja generowana automatycznie (Swagger).
+- **Sklep internetowy:** katalog, koszyk, płatność (na razie symulowana), konta klientów.
+
+Repozytorium składa się z dwóch części:
+
+| Część        | Katalog     | Technologia                            | Dokumentacja |
+|--------------|-------------|----------------------------------------|--------------|
+| **Backend**  | `app/` (oraz `alembic/`, `tests/`) | Python, FastAPI, PostgreSQL | ten plik |
+| **Frontend** | `frontend/` | HTML, CSS, JavaScript (moduły ES), bez procesu budowania | [`frontend/README.md`](frontend/README.md) |
+| Kontrakt API | `docs/`     | opis endpointów i schemat bazy         | [`docs/API.md`](docs/API.md), [`docs/schema.sql`](docs/schema.sql) |
 
 ### Stan projektu
 
@@ -22,7 +47,8 @@ Planowany zakres (szczegóły ustala Product Owner, patrz [Otwarte pytania](#otw
 | Migracje bazy (Alembic), testy (pytest), lint (ruff), CI  | gotowe        |
 | Model danych: użytkownicy, katalog voucherów, koszyk, zamówienia | gotowe |
 | Endpointy sklepu (`/api/v1`) zgodne z frontendem          | gotowe        |
-| Integracja z frontendem ([voucher-shop](#współpraca-z-frontendem-voucher-shop)) | gotowe |
+| Frontend sklepu (`frontend/`) połączony z API             | gotowe        |
+| Wspólne uruchomienie (frontend + API + baza) jednym poleceniem | gotowe    |
 | Kody voucherów i ich realizacja                           | do zrobienia, czeka na decyzje PO |
 | Prawdziwe płatności                                       | do zrobienia, czeka na decyzje PO |
 
@@ -64,30 +90,31 @@ Tymczasowe założenia w obecnym kodzie (do potwierdzenia przez PO):
 - pydantic-settings (konfiguracja ze zmiennych środowiskowych)
 - PyJWT (tokeny logowania), argon2-cffi (hashowanie haseł)
 - pytest (testy), ruff (lint i formatowanie)
-- Docker, Docker Compose, GitHub Actions (CI)
+- Frontend: HTML5, CSS3, JavaScript ES2022 (moduły ES, Fetch API), serwowany przez nginx
+- Docker, Docker Compose, GitHub Actions (CI, publikacja frontendu na GitHub Pages)
 
 ## Jak działa projekt
 
-Projekt składa się z dwóch kontenerów uruchamianych przez Docker Compose. Frontend
-([voucher-shop](https://github.com/DragneelTracer/voucher-shop)) to osobne repozytorium ze statycznymi plikami,
-które przeglądarka pobiera z dowolnego serwera HTTP (lokalnie: port 8080).
+Projekt składa się z trzech kontenerów uruchamianych przez Docker Compose:
 
 ```
- ┌──────────────────────┐
- │ przeglądarka         │  frontend voucher-shop z http://localhost:8080
- │ (sklep, Swagger)     │  (lub GitHub Pages, wtedy w trybie mock bez API)
- └──────────┬───────────┘
-            │ REST /api/v1 (JSON), http://localhost:8000
-            ▼
- ┌──────────────────────┐        ┌──────────────────────┐
- │ voucher-api          │        │ voucher-db           │
- │ FastAPI + Uvicorn    │───────▶│ PostgreSQL 16        │
- │ port 8000            │ db:5432│ dane w wolumenie     │
- └──────────────────────┘        │ pgdata               │
-                                 └──────────▲───────────┘
-                                            │ localhost:5433
-                                  DBeaver / psql (podgląd bazy)
+                          przeglądarka
+               │                              │
+               │ http://localhost:8080        │ REST /api/v1 (JSON)
+               │ pliki HTML, CSS, JS          │ http://localhost:8000
+               ▼                              ▼
+ ┌──────────────────────┐      ┌──────────────────────┐        ┌──────────────────────┐
+ │ voucher-web          │      │ voucher-api          │        │ voucher-db           │
+ │ nginx                │      │ FastAPI + Uvicorn    │───────▶│ PostgreSQL 16        │
+ │ pliki z frontend/    │      │ port 8000            │ db:5432│ dane w wolumenie     │
+ └──────────────────────┘      └──────────────────────┘        │ pgdata               │
+                                                               └──────────▲───────────┘
+                                                                          │ localhost:5433
+                                                                DBeaver / psql (podgląd bazy)
 ```
+
+- **Frontend** to statyczne pliki. Kontener `web` (nginx) tylko wysyła je do przeglądarki, a cała logika
+  działa w przeglądarce i rozmawia bezpośrednio z API (dlatego API ma ustawiony CORS dla `localhost:8080`).
 
 - **API** startuje dopiero, gdy baza jest gotowa (healthcheck Postgresa).
 - **Przy każdym starcie** API najpierw wykonuje migracje bazy (`alembic upgrade head`), więc struktura bazy jest zawsze aktualna.
@@ -97,7 +124,7 @@ które przeglądarka pobiera z dowolnego serwera HTTP (lokalnie: port 8080).
 
 ## Uruchomienie lokalne
 
-Wymagany jest [Docker Desktop](https://www.docker.com/products/docker-desktop/). Pythona nie trzeba instalować, bo wszystko działa w kontenerach.
+Wymagany jest [Docker Desktop](https://www.docker.com/products/docker-desktop/). Pythona ani Node.js nie trzeba instalować, bo wszystko działa w kontenerach.
 
 ```bash
 git clone https://github.com/Rafalp03/Voucher.git
@@ -110,6 +137,7 @@ Po uruchomieniu:
 
 | Co                         | Adres                                    |
 |----------------------------|------------------------------------------|
+| **Sklep (frontend)**       | http://localhost:8080                    |
 | API                        | http://localhost:8000                    |
 | Sprawdzenie działania      | http://localhost:8000/health             |
 | Dokumentacja API (Swagger) | http://localhost:8000/docs               |
@@ -180,8 +208,8 @@ Dane w bazie można bezpośrednio podejrzeć, patrz [Podgląd danych w bazie](#p
 ## Endpointy
 
 Wszystkie endpointy sklepu mają prefiks `/api/v1`. Pełna, interaktywna lista jest w Swaggerze
-(http://localhost:8000/docs), a kontrakt z frontendem opisuje `docs/API.md` w repozytorium
-[voucher-shop](https://github.com/DragneelTracer/voucher-shop).
+(http://localhost:8000/docs), a kontrakt z frontendem (przykłady żądań i odpowiedzi) opisuje
+[`docs/API.md`](docs/API.md).
 
 | Metoda i ścieżka                    | Opis                                                        | Logowanie |
 |-------------------------------------|-------------------------------------------------------------|-----------|
@@ -211,17 +239,16 @@ Zasady:
   ```
 - **Dane startowe:** migracja `dane_startowe_katalogu` wstawia 8 voucherów (21 progów cenowych) z katalogu frontendu.
 
-## Współpraca z frontendem (voucher-shop)
+## Frontend
 
-Frontend to statyczna aplikacja (HTML, CSS, JS) w osobnym repozytorium. Domyślnie łączy się z API pod `http://localhost:8000/api/v1`.
+Frontend jest w katalogu [`frontend/`](frontend/). Jego architekturę, strukturę plików i źródła zdjęć
+opisuje [`frontend/README.md`](frontend/README.md).
 
-1. Uruchom backend: `docker compose up -d` (w tym repozytorium).
-2. Uruchom frontend w katalogu `voucher-shop`:
-   ```bash
-   python -m http.server 8080      # Windows: py -m http.server 8080
-   ```
-   Na Windowsie polecenie `python` często otwiera Microsoft Store. Wtedy użyj `py`.
-3. Otwórz http://localhost:8080.
+- `docker compose up` uruchamia go automatycznie pod http://localhost:8080 (kontener `web`).
+- Katalog `frontend/` jest podmontowany do kontenera, więc po zmianie pliku wystarczy odświeżyć stronę
+  (Ctrl+F5, jeśli przeglądarka trzyma starą wersję w pamięci podręcznej).
+- Frontend łączy się z API pod `http://localhost:8000/api/v1` (ustawienie `API_BASE_URL` w `frontend/js/config.js`).
+- Bez backendu frontend może działać na danych testowych: http://localhost:8080/?mock=1.
 
 ### Ręczne testowanie sklepu
 
@@ -234,9 +261,18 @@ Frontend to statyczna aplikacja (HTML, CSS, JS) w osobnym repozytorium. Domyśln
 
 W przeglądarce (F12, zakładka Network) widać żądania do `http://localhost:8000/api/v1/...` i odpowiedzi API.
 
-Frontend serwowany z innego portu niż 8080, 5500 lub 3000 trzeba dopisać do `CORS_ORIGINS` w `.env`. Inaczej przeglądarka zablokuje żądania do API.
+Frontend serwowany z innego portu niż 8080, 5500 lub 3000 (np. przez Live Server w VS Code na nietypowym porcie)
+trzeba dopisać do `CORS_ORIGINS` w `.env`. Inaczej przeglądarka zablokuje żądania do API.
 
-Na GitHub Pages frontend sam przełącza się na dane testowe (mock), bo nie ma tam backendu. Tryb można też wymusić parametrem adresu: `?mock=1` albo `?mock=0`.
+### Publikacja frontendu na GitHub Pages
+
+Workflow `.github/workflows/pages.yml` publikuje katalog `frontend/` na GitHub Pages po każdej zmianie
+w `frontend/` na gałęzi `main` (można go też uruchomić ręcznie w zakładce *Actions*).
+
+1. Jednorazowo: *Settings → Pages → Build and deployment → Source: **GitHub Actions***.
+2. Strona będzie pod `https://<użytkownik>.github.io/Voucher/`.
+
+Na GitHub Pages nie ma backendu, więc frontend sam przełącza się tam na dane testowe (mock).
 
 ## Praca z kodem
 
@@ -244,6 +280,7 @@ W trybie lokalnym (`docker-compose.override.yml`, wczytywany automatycznie):
 
 - cały katalog projektu jest podmontowany do kontenera, więc zmiany w kodzie widać od razu,
 - serwer restartuje się sam po zapisaniu pliku w `app/`,
+- zmiany we frontendzie (`frontend/`) widać po odświeżeniu strony,
 - obraz zawiera narzędzia deweloperskie (pytest, ruff).
 
 Obraz trzeba przebudować (`docker compose up --build`) tylko po zmianie `requirements*.txt` lub `Dockerfile`.
@@ -380,6 +417,9 @@ Przy każdym Pull Requeście i każdej zmianie na `main` GitHub automatycznie ur
 | **Testy (pytest)** | wszystkie testy na prawdziwej bazie PostgreSQL 16      |
 | **Budowanie obrazu** | czy obraz produkcyjny Dockera się buduje             |
 
+Osobny workflow `.github/workflows/pages.yml` publikuje frontend na GitHub Pages
+(patrz [Publikacja frontendu na GitHub Pages](#publikacja-frontendu-na-github-pages)).
+
 PR scalamy dopiero, gdy wszystkie kroki są zielone. Przed wysłaniem zmian warto uruchomić lokalnie `ruff check .`, `ruff format .` i `pytest`.
 
 ## Rozwiązywanie problemów
@@ -391,7 +431,8 @@ PR scalamy dopiero, gdy wszystkie kroki są zielone. Przed wysłaniem zmian wart
 | `/health` zwraca 503, w logach `password authentication failed` | hasło w `.env` różni się od tego w bazie: `docker compose down -v`, potem `docker compose up` |
 | API nie startuje, w logach błąd z `alembic`        | błąd w migracji: sprawdź ostatni plik w `alembic/versions/`                  |
 | `port is already allocated` dla 5433               | zmień `POSTGRES_PORT` w `.env`                                               |
-| `port is already allocated` dla 8000               | zatrzymaj program zajmujący port 8000                                        |
+| `port is already allocated` dla 8000 lub 8080      | zatrzymaj program zajmujący ten port (np. wcześniej uruchomiony `http.server`) |
+| sklep pokazuje stare pliki po zmianie we `frontend/` | odśwież stronę z pominięciem pamięci podręcznej (Ctrl+F5)                  |
 | `ModuleNotFoundError` po dodaniu pakietu           | `docker compose up --build`                                                  |
 | `pytest: not found` w kontenerze                   | obraz zbudowany bez narzędzi deweloperskich: `docker compose up --build`     |
 | zmiany w kodzie nie są widoczne                    | sprawdź logi API (`docker compose logs -f api`), czy serwer się zrestartował |
@@ -399,7 +440,14 @@ PR scalamy dopiero, gdy wszystkie kroki są zielone. Przed wysłaniem zmian wart
 ## Struktura
 
 ```
-app/                        kod aplikacji (FastAPI)
+frontend/                   sklep VoucherShop (HTML, CSS, JS), opis w frontend/README.md
+  index.html                szkielet strony
+  js/                       logika: router, widoki, serwisy API, dane testowe (mock)
+  css/, img/                style i zdjęcia
+docs/                       dokumentacja wspólna dla frontendu i backendu
+  API.md                    kontrakt REST API (żądania, odpowiedzi, błędy)
+  schema.sql                schemat bazy (poglądowo; źródłem są migracje)
+app/                        backend: kod aplikacji (FastAPI)
   main.py                   aplikacja: CORS, obsługa błędów, podpięcie routerów, /health
   config.py                 ustawienia ze zmiennych środowiskowych
   db.py                     połączenie z bazą (SQLAlchemy), sesja get_db, klasa Base modeli
@@ -417,14 +465,16 @@ tests/                      testy (pytest)
   helpers.py                funkcje pomocnicze testów (rejestracja, przykładowe zamówienie)
 scripts/entrypoint.sh       start kontenera: migracje, potem serwer
 .github/workflows/ci.yml    CI: lint, testy, budowanie obrazu
+.github/workflows/pages.yml publikacja frontendu na GitHub Pages
 Dockerfile                  obraz API
-docker-compose.yml          API + baza PostgreSQL
+docker-compose.yml          frontend (nginx) + API + baza PostgreSQL
 docker-compose.override.yml ustawienia do pracy lokalnej (hot reload, narzędzia dev)
 .env.example                wzór zmiennych środowiskowych
 requirements.txt            zależności aplikacji
 requirements-dev.txt        zależności do testów i lintu
 pyproject.toml              konfiguracja ruff i pytest
 alembic.ini                 konfiguracja Alembica
+.editorconfig               wspólne ustawienia edytora (wcięcia, kodowanie, końce linii)
 ```
 
 ## Zasady pracy z repozytorium
@@ -434,3 +484,6 @@ alembic.ini                 konfiguracja Alembica
 - PR musi przejść CI (lint, testy, budowanie obrazu).
 - Zmiany struktury bazy tylko przez migracje Alembica, commitowane razem z modelem.
 - Nowa funkcjonalność razem z testami.
+- Zmiana w API (nowy endpoint, inne pola) razem z aktualizacją [`docs/API.md`](docs/API.md)
+  i serwisów frontendu (`frontend/js/api/`), w tym samym Pull Requeście.
+- Zmiana struktury bazy razem z aktualizacją [`docs/schema.sql`](docs/schema.sql).

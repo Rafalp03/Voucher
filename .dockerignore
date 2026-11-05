@@ -21,6 +21,10 @@ __pycache__/
 .vscode/
 .DS_Store
 
+# Frontend i dokumentacja projektu (frontend serwuje osobny kontener "web")
+frontend/
+docs/
+
 # Testy (w trybie lokalnym są podmontowane przez docker-compose.override.yml)
 tests/
 

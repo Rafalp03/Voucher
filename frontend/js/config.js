@@ -6,7 +6,7 @@
 
 /**
  * Adres bazowy backendu REST (bez końcowego ukośnika).
- * Domyślnie lokalny backend z repozytorium Voucher (docker compose up).
+ * Domyślnie lokalny backend z tego repozytorium (katalog app/, docker compose up).
  * Przykład produkcyjny: 'https://api.vouchershop.pl/api/v1'.
  * @type {string}
  */

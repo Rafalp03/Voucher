@@ -12,9 +12,15 @@ venv/
 .coverage
 htmlcov/
 
+# Frontend: zależności i artefakty narzędzi (na przyszłość)
+node_modules/
+dist/
+coverage/
+
 # IDE
 .idea/
 .vscode/
+*.swp
 
 # System i logi
 .DS_Store

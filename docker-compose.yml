@@ -32,5 +32,17 @@ services:
       retries: 10
     restart: unless-stopped
 
+  # Frontend (statyczne pliki z katalogu frontend/) serwowany przez nginx
+  web:
+    image: nginx:1.27-alpine
+    container_name: voucher-web
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
 volumes:
   pgdata:
