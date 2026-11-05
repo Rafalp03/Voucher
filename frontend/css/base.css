@@ -1,0 +1,16 @@
+/**
+ * @file base.css
+ * @description Zmienne motywu (kolory, promienie, gradienty), reset i typografia, tło strony.
+ * Projekt: VoucherShop (projekt studencki).
+ */
+*{box-sizing:border-box}
+:root{--p:#e94e8a;--p2:#7b5cff;--o:#ff8a5b;--txt:#f5f3ff;--mut:#c9c4dc;--glass:rgba(255,255,255,.09);--glass2:rgba(255,255,255,.14);--line:rgba(255,255,255,.18);--r:20px;--grad:linear-gradient(135deg,var(--o),var(--p) 55%,var(--p2));--ease:cubic-bezier(.2,.8,.2,1)}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--txt);min-height:100vh;line-height:1.55;
+ background:linear-gradient(180deg,rgba(14,10,30,.78),rgba(22,12,40,.88) 45%,rgba(10,8,22,.95)),url(../img/bg.jpg) center/cover fixed #120c22}
+
+.webp body{background-image:linear-gradient(180deg,rgba(14,10,30,.78),rgba(22,12,40,.88) 45%,rgba(10,8,22,.95)),url(../img/bg.webp)}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:3px solid #ffd27a;outline-offset:2px;border-radius:8px}
+h1,h2,h3,.wordmark{font-family:Poppins,Inter,sans-serif;letter-spacing:-.02em}
+h1{margin:.2em 0 .5em;font-size:clamp(1.7rem,3vw,2.3rem)}

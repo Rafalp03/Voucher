@@ -1,0 +1,16 @@
+# Systemowe / edytory
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# Zależności i artefakty (na przyszłość – backend / narzędzia)
+node_modules/
+dist/
+coverage/
+*.log
+
+# Zmienne środowiskowe
+.env
+.env.*

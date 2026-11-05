@@ -1,0 +1,8 @@
+/**
+ * @file responsive.css
+ * @description Responsywność (tablet, telefon) i dostępność (prefers-reduced-motion).
+ * Projekt: VoucherShop (projekt studencki).
+ */
+@media(max-width:860px){.detail,.layout{grid-template-columns:1fr}.detail .thumb{min-height:240px}}
+@media(max-width:600px){.two{grid-template-columns:1fr}.wordmark{display:none}nav a{padding:7px 10px;font-size:.9rem}.cart-item{flex-wrap:wrap}.hero{border-radius:20px}body{background-attachment:scroll}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
