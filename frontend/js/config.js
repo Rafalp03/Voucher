@@ -1,23 +1,31 @@
 /**
  * @file config.js
  * @description Centralna konfiguracja aplikacji. To jedyne miejsce, które trzeba
- * zmienić, aby przełączyć aplikację z danych testowych (mock) na prawdziwe REST API.
+ * zmienić, aby przełączyć aplikację między danymi testowymi (mock) a prawdziwym REST API.
  */
 
 /**
  * Adres bazowy backendu REST (bez końcowego ukośnika).
+ * Domyślnie lokalny backend z repozytorium Voucher (docker compose up).
  * Przykład produkcyjny: 'https://api.vouchershop.pl/api/v1'.
  * @type {string}
  */
-export const API_BASE_URL = 'http://localhost:3000/api/v1';
+export const API_BASE_URL = 'http://localhost:8000/api/v1';
 
 /**
  * Flaga trybu demonstracyjnego.
- * true  – dane z plików js/mock/* i localStorage (działa na GitHub Pages bez serwera),
+ * true  – dane z plików js/mock/* i localStorage (działa bez serwera),
  * false – wszystkie serwisy wywołują endpointy REST spod API_BASE_URL.
+ *
+ * Domyślnie: mock na GitHub Pages (tam nie ma backendu), REST w każdym innym miejscu.
+ * Tryb można wymusić parametrem adresu: ?mock=1 albo ?mock=0.
  * @type {boolean}
  */
-export const USE_MOCK = true;
+export const USE_MOCK = (() => {
+  const forced = new URLSearchParams(location.search).get('mock');
+  if (forced !== null) return forced !== '0';
+  return location.hostname.endsWith('github.io');
+})();
 
 /**
  * Sztuczne opóźnienie odpowiedzi w trybie mock (ms) – symuluje sieć,
@@ -32,7 +40,9 @@ export const MOCK_DELAY_MS = 80;
  */
 export const STORAGE_KEYS = Object.freeze({
   CART: 'voucherCart',
+  CART_ID: 'voucherCartId',
   LAST_ORDER: 'voucherLastOrder',
+  LAST_ORDER_ID: 'voucherLastOrderId',
   USERS: 'voucherUsers',
   SESSION: 'voucherSession',
   TOKEN: 'voucherToken',

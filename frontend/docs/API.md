@@ -1,11 +1,13 @@
 # Specyfikacja REST API – VoucherShop
 
-Dokument opisuje **planowane** endpointy backendu. Frontend jest już do nich przygotowany:
-wystarczy ustawić `USE_MOCK = false` i `API_BASE_URL` w `js/config.js`.
+Dokument opisuje endpointy backendu. Są zaimplementowane w repozytorium
+[Voucher](https://github.com/Rafalp03/Voucher), a interaktywna dokumentacja (Swagger)
+jest pod `http://localhost:8000/docs`. Frontend łączy się z nimi, gdy `USE_MOCK = false`
+(zob. `js/config.js`).
 
 ## Konwencje
 
-- Adres bazowy: `{API_BASE_URL}`, np. `https://api.vouchershop.pl/api/v1`.
+- Adres bazowy: `{API_BASE_URL}`, lokalnie `http://localhost:8000/api/v1`.
 - Format danych: JSON (`Content-Type: application/json; charset=utf-8`).
 - Kwoty w złotych jako liczby (`150` = 150,00 zł). Daty w ISO 8601 (UTC).
 - Uwierzytelnianie: nagłówek `Authorization: Bearer <token>` (JWT) dla endpointów oznaczonych 🔒.
@@ -19,7 +21,7 @@ wystarczy ustawić `USE_MOCK = false` i `API_BASE_URL` w `js/config.js`.
 |---|---|
 | 200 / 201 | Sukces / utworzono zasób |
 | 204 | Sukces bez treści |
-| 400 / 422 | Błędne lub niekompletne dane |
+| 400 / 422 | Błędne lub niekompletne dane. Dla 422 z walidacji `code` to `VALIDATION_ERROR`, a pole `errors` zawiera szczegóły |
 | 401 | Brak lub nieważny token |
 | 404 | Nie znaleziono zasobu |
 | 409 | Konflikt (np. e-mail zajęty) |
@@ -78,7 +80,7 @@ Błędy: **422** (walidacja), **409** (e-mail zajęty). Hasło hashowane po stro
 **Odpowiedź 200** – jak w rejestracji. **401** przy błędnych danych.
 
 ### `POST /auth/logout` 🔒
-Unieważnia token. **Odpowiedź 204.**
+Unieważnia token (kolejne żądania z nim dostaną 401). **Odpowiedź 204.**
 
 ### `GET /users/me` 🔒
 **Odpowiedź 200**
@@ -90,8 +92,14 @@ Unieważnia token. **Odpowiedź 204.**
 
 ## 3. Koszyk
 
-Koszyk jest przypisany do użytkownika (🔒) lub do sesji gościa (nagłówek `X-Cart-Id`).
-W trybie mock przechowywany jest w `localStorage`.
+Koszyk jest przypisany do przeglądarki przez nagłówek `X-Cart-Id`: losowy UUID, który
+`apiClient.js` tworzy przy pierwszym żądaniu, zapisuje w `localStorage` (`voucherCartId`)
+i dołącza do każdego żądania. Działa tak samo dla gościa i zalogowanego użytkownika.
+Bez nagłówka `GET /cart` zwraca `[]`, a operacje zmieniające koszyk – **400** (`CART_ID_REQUIRED`).
+W trybie mock koszyk przechowywany jest w `localStorage`.
+
+Ilość jednej pozycji jest ograniczona do 20. Dodanie nieistniejącego vouchera lub progu cenowego
+zwraca **422** (`TIER_NOT_FOUND`).
 
 ### `GET /cart`
 **Odpowiedź 200**
@@ -121,6 +129,8 @@ Usuwa pozycję / czyści koszyk. **Odpowiedź 200** – zawartość koszyka (lub
 
 ### `POST /orders`
 Składa zamówienie. Ceny i suma są **liczone po stronie serwera** na podstawie katalogu.
+Jeśli żądanie ma ważny token, zamówienie trafia do historii użytkownika; bez tokenu (lub z nieważnym)
+powstaje zamówienie gościa. Płatność jest symulowana, więc status to od razu `paid`.
 Dane karty / kod BLIK nie są przesyłane do API – obsługuje je zewnętrzny operator płatności.
 
 **Żądanie**
@@ -150,7 +160,9 @@ Dane karty / kod BLIK nie są przesyłane do API – obsługuje je zewnętrzny o
 Historia zamówień zalogowanego użytkownika (najnowsze pierwsze) – tablica obiektów jak wyżej.
 
 ### `GET /orders/:id`
-Szczegóły zamówienia. Dostęp: właściciel konta (🔒) lub gość posiadający identyfikator zamówienia.
+Szczegóły zamówienia. Dostęp: właściciel konta (🔒) lub – dla zamówienia złożonego jako gość –
+każdy, kto zna jego identyfikator. W pozostałych przypadkach **404**.
+Frontend zapamiętuje identyfikator ostatniego zamówienia (`voucherLastOrderId`), żeby pokazać ekran sukcesu.
 
 ---
 

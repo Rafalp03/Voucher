@@ -3,6 +3,7 @@
  * @description Funkcje pomocnicze współdzielone przez widoki i warstwę mock:
  * formatowanie kwot, bezpieczne wstawianie tekstu do HTML, kryptografia, fragmenty UI.
  */
+import { USE_MOCK } from './config.js';
 
 /**
  * Formatuje kwotę w złotych według polskich zasad (np. „1 250,00 zł”).
@@ -97,6 +98,7 @@ export const showErrors = (errors) => {
   if (el) el.innerHTML = errors.map(esc).join('<br>');
 };
 
-/** Komunikat informujący, że konta działają tylko lokalnie (tryb demo). */
-export const DEMO_NOTE =
-  '<div class="note">⚠️ DEMO – konta są przechowywane wyłącznie lokalnie w tej przeglądarce (localStorage). Brak serwera; nie używaj prawdziwego hasła.</div>';
+/** Komunikat nad formularzami kont – inny w trybie mock (bez serwera) i w trybie API. */
+export const DEMO_NOTE = USE_MOCK
+  ? '<div class="note">⚠️ DEMO – konta są przechowywane wyłącznie lokalnie w tej przeglądarce (localStorage). Brak serwera; nie używaj prawdziwego hasła.</div>'
+  : '<div class="note">⚠️ Wersja testowa – nie używaj hasła, którego używasz w innych serwisach.</div>';

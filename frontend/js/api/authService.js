@@ -12,7 +12,14 @@ const restImpl = {
   register: (data) => api.post('/auth/register', data),
   login: (data) => api.post('/auth/login', data),
   logout: () => api.post('/auth/logout', {}).catch(() => null),
-  me: () => (getToken() ? api.get('/users/me').catch(() => null) : Promise.resolve(null)),
+  me: () =>
+    getToken()
+      ? api.get('/users/me').catch((err) => {
+          // Token wygasł lub został unieważniony – usuwamy go, żeby nie wysyłać go dalej.
+          if (err.status === 401) setToken(null);
+          return null;
+        })
+      : Promise.resolve(null),
 };
 
 const impl = USE_MOCK ? authMock : restImpl;

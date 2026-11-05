@@ -5,6 +5,7 @@
  * parsowanie odpowiedzi i ujednolicenie błędów (ApiError).
  */
 import { API_BASE_URL, STORAGE_KEYS } from '../config.js';
+import { randomHex } from '../utils.js';
 
 /** Błąd zwracany przez API – zawiera kod HTTP i treść odpowiedzi. */
 export class ApiError extends Error {
@@ -32,6 +33,21 @@ export const setToken = (token) =>
   token ? localStorage.setItem(STORAGE_KEYS.TOKEN, token) : localStorage.removeItem(STORAGE_KEYS.TOKEN);
 
 /**
+ * Zwraca identyfikator koszyka tej przeglądarki (tworzy go przy pierwszym użyciu).
+ * Backend rozpoznaje po nim koszyk, także gdy użytkownik nie jest zalogowany.
+ * @returns {string}
+ */
+export function getCartId() {
+  let id = localStorage.getItem(STORAGE_KEYS.CART_ID);
+  if (!id) {
+    // randomUUID działa tylko w bezpiecznym kontekście (https lub localhost)
+    id = crypto.randomUUID ? crypto.randomUUID() : randomHex(16);
+    localStorage.setItem(STORAGE_KEYS.CART_ID, id);
+  }
+  return id;
+}
+
+/**
  * Wykonuje żądanie HTTP do API.
  * @template T
  * @param {string} path Ścieżka względem API_BASE_URL, np. '/vouchers'.
@@ -43,7 +59,7 @@ export async function request(path, { method = 'GET', body, query } = {}) {
   const url = new URL(API_BASE_URL + path);
   if (query) Object.entries(query).forEach(([k, v]) => url.searchParams.set(k, String(v)));
 
-  const headers = { Accept: 'application/json' };
+  const headers = { Accept: 'application/json', 'X-Cart-Id': getCartId() };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   const token = getToken();
   if (token) headers.Authorization = `Bearer ${token}`; // autoryzacja JWT
